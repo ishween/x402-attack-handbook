@@ -2,10 +2,10 @@
 
 **Six attacks on autonomous agent payments, and where the fix lives.**
 
-> Built for the official x402 TypeScript SDK (`@x402/*` 2.28.0), October 2026.
-> A personal exploration, not an official project. Two attacks run live on a public
-> testnet (Base Sepolia); the rest run in a local simulation that follows the same
-> payment rules. Every claim below says where it was tested.
+> Built for the official x402 TypeScript SDK (`@x402/*` 2.28.0), October 2026. Two
+> attacks run live on a public testnet (Base Sepolia); the rest run in a local
+> simulation that follows the same payment rules. Every claim below says where it was
+> tested.
 
 Agents can now discover paid APIs and pay for them over plain HTTP, with no human in
 the loop. x402 makes this work. But a payment that settles correctly is not the same
@@ -31,9 +31,19 @@ signs a payment, the facilitator **verifies** (signature, balance, unused nonce)
 then **settles** (moves the money), and the seller delivers. Verify and settle are
 separate steps. Several attacks live in the gap between them.
 
-**The one lesson:** none of the six fixes lives in the facilitator. It checks that a
-payment is valid. It cannot know what your agent *meant* to buy, or what your seller
-*meant* to deliver.
+---
+
+## Threat model
+
+- **What we protect:** the user's funds, the payment authorization, and the resource
+  the agent is meant to receive.
+- **Who attacks:** a malicious or compromised seller, a manipulated service listing,
+  untrusted payment data in the 402, or seller reply text that the model reads.
+- **What goes wrong:** the agent overpays, pays the wrong recipient, pays twice, gets
+  data without paying, or gets the wrong resource after paying. In most cases the
+  transaction is still technically valid.
+- **The defense:** deterministic checks before signing (buyer) and payment verification
+  before delivery (seller), with no extra model call in the authorization path.
 
 ---
 
@@ -45,9 +55,9 @@ payment is valid. It cannot know what your agent *meant* to buy, or what your se
 | **Local sim** | Ran in the local simulation (`SimChain`), which follows EIP-3009 rules |
 | **Docs** | Backed by the official x402 documentation |
 
-The two live demos are cards 1 and 6. Cards 2 to 5 are tested in the local simulation;
-testnet verification is in progress. See [RUNNING.md](RUNNING.md) for how to run each
-one yourself, on a testnet or the local simulation, without risking real funds.
+The two live demos are cards 1 and 6. Cards 2 to 5 are tested in the local simulation.
+See [RUNNING.md](RUNNING.md) for how to run each one yourself, on a testnet or the
+local simulation.
 
 ---
 
@@ -73,9 +83,11 @@ nothing reaches the facilitator or the chain.
 - The guard: [`src/buyer/guard.ts`](src/buyer/guard.ts)
 - Live on testnet: [`src/testnet/card1.ts`](src/testnet/card1.ts)
 
-**Result:** Testnet, live, official SDK. Local sim benchmark: no guard overcharged in
-most rounds; a price-only guard missed the `payTo` and `asset` cases; every-field guard
-blocked all.
+**Result:** Testnet, live, official SDK, plus a local simulation of 240 rounds. The fix
+is deterministic, so it blocks every attack it is designed to catch: the every-field
+guard allowed **0 of 240** wrong payments. For contrast, with no guard, 220 of 240
+overcharged (the other 20 were the `$5` case, which the SDK's own `$1` cap already
+blocks), and a price-only guard still missed the `payTo` and `asset` cases (120 of 240).
 
 ---
 
@@ -99,16 +111,18 @@ work before settle does it five times.
 > effect (an email, a paid API call, a database write) happened per copy.
 
 **The fix (seller):** claim each payment once, in a shared store, keyed by the nonce,
-before any work. The `payment-identifier` extension gives you the id and the docs tell
-you to cache the answer by it; you bring the store (Redis). **The fix (buyer):** save
-the signed payment and resend the same one on a timeout, never a fresh one.
+before any work. The lab does this with an in-process store (see `seller.ts`); in
+production you use a store every server instance shares, like Redis. The
+`payment-identifier` extension gives you the id and the docs tell you to cache the
+answer by it. **The fix (buyer):** save the signed payment and resend the same one on a
+timeout, never a fresh one.
 
 - Attack and fix: [`src/cards/card2-replay.ts`](src/cards/card2-replay.ts)
 - The seller: [`src/seller/seller.ts`](src/seller/seller.ts)
 
-**Result:** Local sim. Testnet verification in progress. The seller "claim once" guidance
-is also in the x402 facilitator docs (for Solana, a merchant settling without a
-facilitator "must implement equivalent duplicate detection yourself").
+**Result:** Local sim. The seller "claim once" guidance is also in the x402 facilitator
+docs (for Solana, a merchant settling without a facilitator "must implement equivalent
+duplicate detection yourself").
 
 ---
 
@@ -123,9 +137,7 @@ three doors.
 
 1. **Valid is not paid.** Verify is a snapshot: it checks the signature and the balance,
    but it does not hold the money. If the seller delivers on "valid," the money can be
-   gone by settle. (The official facilitator checks the balance at verify, so an empty
-   wallet fails there; the risk is a seller that delivers before settle completes, or a
-   facilitator that checks signatures alone.)
+   gone by settle.
 2. **The side entrance.** The paywall guards `/report`, but the same data sits at
    `/download` with no paywall.
 3. **The shared cache.** A buyer pays, the CDN keeps a copy, and the next person gets it
@@ -138,8 +150,12 @@ covers all three doors: nothing goes out unless a payment came in.
 - Attack and fix: [`src/cards/card3-free-shopping.ts`](src/cards/card3-free-shopping.ts)
 - The cache stand-in: [`src/seller/cache.ts`](src/seller/cache.ts)
 
-**Result:** Local sim. Door 1 shown with a signature-only facilitator; with a strict
-facilitator the empty-wallet case fails at verify, as expected.
+**Result:** Local sim. Door 1 is shown with two facilitator modes. A **signature-only**
+facilitator checks that the signature is valid but not whether the wallet has the money,
+so an empty-wallet payment passes verify, and a seller that delivers on "valid" leaks
+the data. A **strict** facilitator (and the official one) also checks the balance, so
+the empty wallet fails at verify. Either way the rule holds: deliver only after settle,
+not on "valid."
 
 ---
 
@@ -223,9 +239,9 @@ It cannot give your agent permission.
 - The guard: [`src/buyer/guard.ts`](src/buyer/guard.ts)
 - Live on testnet with a local model: [`src/testnet/card6.ts`](src/testnet/card6.ts)
 
-**Result:** Testnet, live, with Llama 3.2 on a laptop. Local sim benchmark covers five
-reply styles (including a legitimate follow-on, to confirm the guard does not block it)
-and the plan-lock defense.
+**Result:** Testnet, live, with Llama 3.2 on a laptop. Local sim covers five reply
+styles (including a legitimate follow-on, to confirm the guard does not block it) and
+the plan-lock defense.
 
 ---
 
@@ -252,22 +268,21 @@ one payment per purchase, no honest purchases blocked.
 ## Run it yourself
 
 See **[RUNNING.md](RUNNING.md)** for setup and the exact commands, on a public testnet
-or the local simulation, without risking real funds. The local simulation needs no keys
-and no funds. The testnet demos need a testnet-only wallet and test USDC from a faucet.
+or the local simulation. The local simulation needs no keys and no funds. The testnet
+demos need a testnet-only wallet and test USDC from a faucet.
 
 **Dashboard:** the lab writes each run to `results/` and serves a trace view that draws
 the full pipeline (offer, 402, guard, signature, verify, settle). See RUNNING.md.
 
 ---
 
-## Related work
+## See also
 
-This is a personal exploration, not the first study of x402 security. For context and
-comparison, see the published research on x402 attacks and agent-payment security
-(for example, work presented at USENIX Security 2026 and preprints on arXiv in 2026),
-and the x402 security test discussions in the Google `a2a-x402` project. This handbook's
-focus is the boundary between what a user authorized, what the agent signed, what
-settled, and what the system ultimately delivered.
+x402 security has been studied before. For context and comparison, see published
+research on x402 attacks and agent-payment security (for example, work at USENIX
+Security 2026 and preprints on arXiv in 2026) and the x402 security test discussions in
+the Google `a2a-x402` project. This handbook focuses on one boundary: what a user
+authorized, what the agent signed, what settled, and what was delivered.
 
 ---
 
@@ -283,6 +298,6 @@ settled, and what the system ultimately delivered.
 ## Limitations
 
 - Benchmark numbers come from the local simulation unless marked Testnet.
-- Cards 1 and 6 ran live; cards 2 to 5 are being verified on a testnet.
+- Cards 1 and 6 ran live; cards 2 to 5 are tested in the local simulation.
 - Code targets `@x402/*` 2.28.0. Hook and extension names change between versions; check
   the current [x402 docs](https://docs.x402.org) before copying into production.

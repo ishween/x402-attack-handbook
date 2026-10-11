@@ -1,0 +1,429 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>x402 Lab</title>
+<style>
+  :root {
+    color-scheme: light;
+    --page: #f9f9f7; --surface: #fcfcfb; --ink: #0b0b0b; --ink-2: #52514e; --muted: #898781;
+    --grid: #e1e0d9; --axis: #c3c2b7; --ring: rgba(11,11,11,0.10);
+    --series: #2a78d6; --series-soft: #cde2fb;
+    --good: #0ca30c; --good-ink: #006300; --warn: #fab219; --warn-ink: #8a5a00; --bad: #d03b3b; --bad-ink: #a32424;
+    --good-bg: rgba(12,163,12,0.10); --warn-bg: rgba(250,178,25,0.16); --bad-bg: rgba(208,59,59,0.10);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --page: #0d0d0d; --surface: #1a1a19; --ink: #ffffff; --ink-2: #c3c2b7; --muted: #898781;
+      --grid: #2c2c2a; --axis: #383835; --ring: rgba(255,255,255,0.10);
+      --series: #3987e5; --series-soft: #184f95;
+      --good-ink: #0ca30c; --warn-ink: #fab219; --bad-ink: #e66767;
+      --good-bg: rgba(12,163,12,0.16); --warn-bg: rgba(250,178,25,0.14); --bad-bg: rgba(208,59,59,0.20);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --page: #0d0d0d; --surface: #1a1a19; --ink: #ffffff; --ink-2: #c3c2b7; --muted: #898781;
+    --grid: #2c2c2a; --axis: #383835; --ring: rgba(255,255,255,0.10);
+    --series: #3987e5; --series-soft: #184f95;
+    --good-ink: #0ca30c; --warn-ink: #fab219; --bad-ink: #e66767;
+    --good-bg: rgba(12,163,12,0.16); --warn-bg: rgba(250,178,25,0.14); --bad-bg: rgba(208,59,59,0.20);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--page); color: var(--ink); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  header { display: flex; align-items: center; gap: 24px; padding: 14px 24px; border-bottom: 1px solid var(--ring); background: var(--surface); position: sticky; top: 0; z-index: 5; flex-wrap: wrap; }
+  header h1 { font-size: 16px; margin: 0; font-weight: 650; letter-spacing: -0.01em; }
+  header h1 span { color: var(--muted); font-weight: 450; }
+  nav { display: flex; gap: 4px; }
+  nav button, .btn { border: 0; background: transparent; color: var(--ink-2); font: inherit; padding: 6px 12px; border-radius: 8px; cursor: pointer; }
+  nav button[aria-selected="true"] { background: var(--page); color: var(--ink); font-weight: 600; box-shadow: inset 0 0 0 1px var(--ring); }
+  nav button:hover, .btn:hover { color: var(--ink); }
+  .spacer { flex: 1; }
+  main { padding: 24px; max-width: 1240px; margin: 0 auto; }
+  section[hidden] { display: none; }
+  h2 { font-size: 20px; margin: 0 0 4px; letter-spacing: -0.01em; }
+  h3 { font-size: 15px; margin: 0 0 2px; }
+  .lead { color: var(--ink-2); margin: 0 0 20px; max-width: 760px; }
+  .card { background: var(--surface); border: 1px solid var(--ring); border-radius: 12px; padding: 18px 20px; margin-bottom: 18px; }
+  .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
+  select { font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--ring); border-radius: 8px; padding: 6px 10px; max-width: 100%; }
+  label.ctl { color: var(--muted); font-size: 12px; display: flex; flex-direction: column; gap: 4px; }
+  .muted { color: var(--muted); }
+  .q { color: var(--ink-2); margin: 0 0 14px; }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  th { text-align: left; font-weight: 550; color: var(--muted); font-size: 12px; padding: 6px 10px; border-bottom: 1px solid var(--grid); }
+  td { padding: 7px 10px; border-bottom: 1px solid var(--grid); vertical-align: top; }
+  tr.click { cursor: pointer; }
+  tr.click:hover td { background: var(--page); }
+  .score td { padding: 10px; }
+  .cell { border-radius: 8px; padding: 8px 10px; min-width: 150px; }
+  .cell b { font-size: 18px; display: block; }
+  .cell small { color: var(--ink-2); display: block; }
+  .cell.good { background: var(--good-bg); } .cell.good .tag { color: var(--good-ink); }
+  .cell.bad { background: var(--bad-bg); } .cell.bad .tag { color: var(--bad-ink); }
+  .cell.warn { background: var(--warn-bg); } .cell.warn .tag { color: var(--warn-ink); }
+  .cell.none { color: var(--muted); }
+  .tag { font-size: 12px; font-weight: 600; }
+  .legend { display: flex; gap: 18px; flex-wrap: wrap; color: var(--ink-2); font-size: 12px; margin-top: 12px; }
+  .legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+  .lg-good::before { background: var(--good); } .lg-bad::before { background: var(--bad); } .lg-warn::before { background: var(--warn); }
+  svg text { font-family: inherit; }
+  .chart { width: 100%; overflow-x: auto; }
+  #tip { position: fixed; pointer-events: none; background: var(--surface); color: var(--ink); border: 1px solid var(--ring); border-radius: 8px; padding: 8px 10px; font-size: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.12); display: none; z-index: 20; max-width: 360px; }
+  pre { background: var(--page); border: 1px solid var(--ring); border-radius: 8px; padding: 12px; overflow: auto; font-size: 12px; max-height: 320px; margin: 0; }
+  .split { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 18px; }
+  @media (max-width: 900px) { .split { grid-template-columns: 1fr; } main { padding: 16px; } }
+  .checks td, .checks th { padding: 6px 10px; font-size: 13px; overflow-wrap: anywhere; } .checks td:first-child { white-space: nowrap; font-weight: 600; }
+  .checks .ok { color: var(--good-ink); font-weight: 600; } .checks .no { color: var(--bad-ink); font-weight: 600; }
+  .checks tr.fail td { background: var(--bad-bg); }
+  .head-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .pill { display: inline-block; padding: 1px 8px; border-radius: 99px; font-size: 12px; background: var(--page); border: 1px solid var(--ring); color: var(--ink-2); }
+  .live-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--good); margin-right: 6px; animation: pulse 1.4s infinite; }
+  @keyframes pulse { 50% { opacity: 0.3; } }
+  .empty { color: var(--muted); padding: 24px 0; }
+</style>
+</head>
+<body>
+<header>
+  <h1>x402 lab <span>· attacks, fixes, evidence</span></h1>
+  <nav role="tablist">
+    <button role="tab" data-tab="score" aria-selected="true">Scoreboard</button>
+    <button role="tab" data-tab="exp">Experiments</button>
+    <button role="tab" data-tab="trace">Trace</button>
+    <button role="tab" data-tab="live">Live</button>
+  </nav>
+  <div class="spacer"></div>
+  <span class="muted" id="where" style="font-size:12px"></span>
+  <button class="btn" id="theme" title="Toggle light and dark">Light / dark</button>
+</header>
+
+<main>
+  <!-- SCOREBOARD -->
+  <section id="tab-score">
+    <h2>Scoreboard</h2>
+    <p class="lead">Attack success rate for each card, with no fix, a partial fix and the full fix. Each cell shows successful attacks out of rounds run and money lost per 1,000 attempts. Under each attack: what the full fix costs, measured on honest purchases only. Lower is better.</p>
+    <div class="card"><div id="score"></div>
+      <div class="legend"><span class="lg-good">✓ Blocked: 0 successful attacks</span><span class="lg-bad">✗ Got through</span><span class="lg-warn">⚠ Open: a cost or limit remains</span></div>
+    </div>
+    <p class="muted" id="score-note"></p>
+  </section>
+
+  <!-- EXPERIMENTS -->
+  <section id="tab-exp" hidden>
+    <h2>Experiments</h2>
+    <p class="lead">One run of one card. Bars show the attack success rate per setting with a 95% Wilson interval. Click a row to see its trace.</p>
+    <div class="row">
+      <label class="ctl">Run<select id="run-select"></select></label>
+      <span class="muted" id="run-meta"></span>
+    </div>
+    <div id="experiments"></div>
+  </section>
+
+  <!-- TRACE -->
+  <section id="tab-trace" hidden>
+    <h2>Trace</h2>
+    <p class="lead">Every step of one round, drawn from the event log. Arrows are messages between parties; boxes are decisions inside one party. The shaded area is the buyer's own code: the guard runs there, right before the payment is signed.</p>
+    <div class="row">
+      <label class="ctl">Run<select id="t-run"></select></label>
+      <label class="ctl">Setting<select id="t-setting"></select></label>
+      <label class="ctl">Round<select id="t-round"></select></label>
+    </div>
+    <div class="card" id="trace-head"></div>
+    <div class="card chart" id="trace"></div>
+    <div class="card"><h3>Step details</h3><div id="detail"><p class="muted" style="margin-top:0">Click a step. Guard steps show every check it ran.</p></div><details><summary class="muted" style="cursor:pointer">Raw log line</summary><pre id="raw">–</pre></details></div>
+  </section>
+
+  <!-- LIVE -->
+  <section id="tab-live" hidden>
+    <h2><span class="live-dot"></span>Live</h2>
+    <p class="lead">The newest events as they are written. Keep this open on a second screen while running the demo.</p>
+    <p class="muted" id="live-meta"></p>
+    <div class="card chart" id="live"></div>
+  </section>
+</main>
+<div id="tip"></div>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const api = (p) => fetch(p).then((r) => r.json());
+const pct = (r) => `${Math.round(r * 100)}%`;
+const usd = (a) => `$${(Number(a) / 1e6).toFixed(2)}`;
+const tip = $("#tip");
+function showTip(html, ev) { tip.innerHTML = html; tip.style.display = "block"; tip.style.left = Math.min(ev.clientX + 14, innerWidth - 380) + "px"; tip.style.top = ev.clientY + 14 + "px"; }
+function hideTip() { tip.style.display = "none"; }
+
+// ---------- tabs and theme ----------
+let liveTimer = null;
+document.querySelectorAll("nav button").forEach((b) => b.onclick = () => openTab(b.dataset.tab));
+function openTab(name) {
+  document.querySelectorAll("nav button").forEach((b) => b.setAttribute("aria-selected", b.dataset.tab === name));
+  document.querySelectorAll("main > section").forEach((s) => s.hidden = s.id !== `tab-${name}`);
+  clearInterval(liveTimer);
+  if (name === "score") loadScore();
+  if (name === "exp" || name === "trace") refreshRuns();
+  if (name === "live") { loadLive(); liveTimer = setInterval(loadLive, 800); }
+}
+$("#theme").onclick = () => {
+  const dark = document.documentElement.dataset.theme ? document.documentElement.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  document.documentElement.dataset.theme = dark ? "light" : "dark";
+};
+
+// ---------- scoreboard ----------
+async function loadScore() {
+  const board = await api("/api/scoreboard");
+  const rows = Object.entries(board).sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }));
+  if (!rows.length) { $("#score").innerHTML = `<p class="empty">No results yet. Run <code>npx tsx src/bench/run.ts all</code>.</p>`; return; }
+  const cols = ["No fix", "Partial fix", "Full fix"];
+  $("#score").innerHTML = `<table class="score"><thead><tr><th>Attack</th>${cols.map((c) => `<th>${c}</th>`).join("")}</tr></thead><tbody>` +
+    rows.map(([name, r]) => `<tr><td><b>${esc(name)}</b><br><span class="muted">${esc(r.source)}</span>${(r.cost ?? []).map((l) => `<br><small style="color:var(--ink-2)">Cost of full fix · ${esc(l)}</small>`).join("")}</td>` +
+      cols.map((c) => cellHtml(r.cells[c])).join("") + `</tr>`).join("") + `</tbody></table>`;
+  $("#score-note").textContent = "Local simulation (SimChain, EIP-3009 rules). Rates are lab results under these settings, not measurements of live x402 deployments.";
+}
+function cellHtml(c) {
+  if (!c) return `<td><div class="cell none">no such fix</div></td>`;
+  if (!c.n) return `<td><div class="cell none">not run</div></td>`;
+  const cls = c.k > 0 ? "bad" : c.open ? "warn" : "good";
+  const tag = c.k > 0 ? "✗ Got through" : c.open ? "⚠ Open" : "✓ Blocked";
+  const ci = `95% CI ${pct(c.lo)}–${pct(c.hi)}`;
+  const cost = c.lossPer1000Usd > 0 ? `$${c.lossPer1000Usd.toFixed(2)} lost per 1,000 attempts` : "";
+  return `<td><div class="cell ${cls}" title="${esc(ci)}"><span class="tag">${tag}</span><b>${c.k}/${c.n}</b><small>${pct(c.rate)} · ${ci}</small>${cost ? `<small>${esc(cost)}</small>` : ""}${c.open ? `<small>${esc(c.open)}</small>` : ""}</div></td>`;
+}
+
+// ---------- experiments ----------
+let runs = [];
+async function loadRuns() {
+  runs = (await api("/api/runs")).filter((r) => r.hasSummary);
+  const opts = runs.map((r) => `<option value="${esc(r.dir)}">${esc(r.dir)}</option>`).join("");
+  $("#run-select").innerHTML = opts; $("#t-run").innerHTML = opts;
+  if (runs.length) { knownNewest = runs[0].dir; loadRun(runs[0].dir); loadTraceRun(runs[0].dir); }
+  else $("#experiments").innerHTML = `<p class="empty">No runs yet.</p>`;
+}
+$("#run-select").onchange = (e) => loadRun(e.target.value);
+
+// pick up runs written since the page opened (keeps your selection unless a newer run appeared)
+let knownNewest = null;
+async function refreshRuns() {
+  const latest = (await api("/api/runs")).filter((r) => r.hasSummary);
+  if (!latest.length || latest[0].dir === knownNewest) return;
+  knownNewest = latest[0].dir;
+  await loadRuns();
+}
+
+async function loadRun(dir) {
+  const { summary, invariants, meta } = await api(`/api/summary?dir=${encodeURIComponent(dir)}`);
+  $("#run-meta").textContent = meta ? `${meta.title} · ${new Date(meta.started).toLocaleString()} · ${meta.chain}${meta.agentModel ? " · model " + meta.agentModel : ""}` : "";
+  const byExp = {};
+  for (const r of summary.runs) (byExp[r.experiment] ??= []).push(r);
+  $("#experiments").innerHTML = "";
+  for (const [exp, rows] of Object.entries(byExp)) {
+    const varying = Object.keys(rows[0].config).filter((k) => new Set(rows.map((r) => String(r.config[k]))).size > 1);
+    const metricNames = [...new Set(rows.flatMap((r) => Object.keys(r.metrics)))];
+    const box = document.createElement("div");
+    box.className = "card";
+    box.innerHTML = `<h3>${esc(exp)}</h3><div class="row" style="margin:8px 0 4px"><label class="ctl">Show<select class="metric"><option value="rate">attack success rate</option>${metricNames.map((m) => `<option value="${esc(m)}">${esc(m)} (average)</option>`).join("")}</select></label></div><div class="chart"></div><details style="margin-top:12px"><summary class="muted" style="cursor:pointer">Table</summary><div class="tbl"></div></details>`;
+    $("#experiments").appendChild(box);
+    const draw = () => barChart(box.querySelector(".chart"), rows, varying, box.querySelector(".metric").value, dir);
+    box.querySelector(".metric").onchange = draw; draw();
+    const inv = invariants?.perRun ?? {};
+    box.querySelector(".tbl").innerHTML = `<table><thead><tr>${varying.map((v) => `<th>${esc(v)}</th>`).join("")}<th>attacks</th><th>rate</th><th>95% CI</th>${metricNames.map((m) => `<th>${esc(m)}</th>`).join("")}<th>oracle</th></tr></thead><tbody>` +
+      rows.map((r) => {
+        const o = inv[r.runId];
+        const broken = o ? ["I1", "I2", "I3", "I4"].filter((i) => o[i] > 0).join(" ") : "";
+        return `<tr class="click" data-run="${esc(r.runId)}">${varying.map((v) => `<td>${esc(r.config[v])}</td>`).join("")}<td>${r.k}/${r.n}</td><td>${pct(r.rate)}</td><td>${pct(r.lo)}–${pct(r.hi)}</td>${metricNames.map((m) => `<td>${r.metrics[m] ?? ""}</td>`).join("")}<td>${o?.mismatches ? "✗ mismatch" : broken ? `broke ${broken}` : "✓"}</td></tr>`;
+      }).join("") + `</tbody></table>`;
+    box.querySelectorAll("tr.click").forEach((tr) => tr.onclick = () => jumpToTrace(dir, tr.dataset.run));
+  }
+}
+
+function barChart(el, rows, varying, metric, dir) {
+  const isRate = metric === "rate";
+  const val = (r) => (isRate ? r.rate : Number(r.metrics[metric] ?? 0));
+  const max = isRate ? 1 : Math.max(1e-9, ...rows.map(val));
+  const labelW = 300, plotW = 560, rowH = 28, top = 26, W = labelW + plotW + 70, H = top + rows.length * rowH + 10;
+  const x = (v) => labelW + (v / max) * plotW;
+  const ticks = isRate ? [0, 0.25, 0.5, 0.75, 1] : [0, max / 2, max];
+  const fmt = (v) => (isRate ? pct(v) : +v.toFixed(2));
+  let s = `<svg viewBox="0 0 ${W} ${H}" width="100%" style="min-width:640px" role="img" aria-label="${esc(metric)} by setting">`;
+  for (const t of ticks) s += `<line x1="${x(t)}" x2="${x(t)}" y1="${top - 6}" y2="${H - 6}" stroke="var(--grid)"/><text x="${x(t)}" y="${top - 12}" font-size="11" fill="var(--muted)" text-anchor="middle">${fmt(t)}</text>`;
+  s += `<line x1="${labelW}" x2="${labelW}" y1="${top - 6}" y2="${H - 6}" stroke="var(--axis)"/>`;
+  rows.forEach((r, i) => {
+    const y = top + i * rowH, v = val(r), w = Math.max(0, x(v) - labelW);
+    const lbl = varying.map((k) => `${k}=${r.config[k]}`).join("  ");
+    s += `<g class="bar" data-i="${i}" style="cursor:pointer">`;
+    s += `<rect x="0" y="${y}" width="${W}" height="${rowH}" fill="transparent"/>`;
+    s += `<text x="${labelW - 10}" y="${y + rowH / 2 + 4}" font-size="12" fill="var(--ink-2)" text-anchor="end">${esc(lbl.length > 46 ? lbl.slice(0, 45) + "…" : lbl)}</text>`;
+    if (w > 0) s += `<path d="M${labelW} ${y + 7}h${Math.max(0, w - 4)}a4 4 0 0 1 4 4v${rowH - 22}a4 4 0 0 1 -4 4h-${Math.max(0, w - 4)}z" fill="var(--series)"/>`;
+    if (isRate) {
+      const cy = y + rowH / 2;
+      s += `<line x1="${x(r.lo)}" x2="${x(r.hi)}" y1="${cy}" y2="${cy}" stroke="var(--muted)" stroke-width="1.25"/><line x1="${x(r.lo)}" x2="${x(r.lo)}" y1="${cy - 4}" y2="${cy + 4}" stroke="var(--muted)" stroke-width="1.25"/><line x1="${x(r.hi)}" x2="${x(r.hi)}" y1="${cy - 4}" y2="${cy + 4}" stroke="var(--muted)" stroke-width="1.25"/>`;
+    }
+    s += `<text x="${Math.max(x(v), isRate ? x(r.hi) : x(v)) + 8}" y="${y + rowH / 2 + 4}" font-size="12" fill="var(--ink)">${isRate ? `${r.k}/${r.n}` : fmt(v)}</text></g>`;
+  });
+  el.innerHTML = s + `</svg>`;
+  el.querySelectorAll("g.bar").forEach((g) => {
+    const r = rows[+g.dataset.i];
+    g.onmousemove = (ev) => showTip(`<b>${esc(Object.entries(r.config).map(([k, v]) => `${k}=${v}`).join(" "))}</b><br>attacks ${r.k}/${r.n} · ${pct(r.rate)}<br>95% CI ${pct(r.lo)}–${pct(r.hi)}${Object.entries(r.metrics).map(([k, v]) => `<br>${esc(k)}: ${esc(v)}`).join("")}<br><span style="color:var(--muted)">click for trace</span>`, ev);
+    g.onmouseleave = hideTip;
+    g.onclick = () => { hideTip(); jumpToTrace(dir, r.runId); };
+  });
+}
+
+// ---------- trace ----------
+const LANES = ["buyer", "guard", "cache", "facilitator", "seller", "chain"];
+const LANE_OF = { buyer: "buyer", agent: "buyer", guard: "guard", cache: "cache", facilitator: "facilitator", seller: "seller", chain: "chain" };
+const NAME = { buyer: "Buyer agent", guard: "Guard", cache: "Shared cache", facilitator: "Facilitator", seller: "Seller", chain: "Chain" };
+const BAD = new Set(["blocked", "invalid", "reverted", "refused", "declined", "timeout", "flagged", "402", "409"]);
+const GOOD = new Set(["ok", "valid", "settled", "allowed", "delivered", "cached"]);
+
+let traceEvents = [];
+$("#t-run").onchange = (e) => loadTraceRun(e.target.value);
+$("#t-setting").onchange = () => loadTraceRounds();
+$("#t-round").onchange = () => loadTrace();
+
+async function loadTraceRun(dir, pick) {
+  const { summary } = await api(`/api/summary?dir=${encodeURIComponent(dir)}`);
+  $("#t-setting").innerHTML = summary.runs.map((r) => `<option value="${esc(r.runId)}">${esc(r.runId)}</option>`).join("");
+  if (pick) $("#t-setting").value = pick;
+  loadTraceRounds();
+}
+async function loadTraceRounds() {
+  const dir = $("#t-run").value, runId = $("#t-setting").value;
+  const { summary } = await api(`/api/summary?dir=${encodeURIComponent(dir)}`);
+  const run = summary.runs.find((r) => r.runId === runId);
+  $("#t-round").innerHTML = Array.from({ length: Math.min(run?.n ?? 1, 60) }, (_, i) => `<option>${i}</option>`).join("");
+  $("#t-round").dataset.config = JSON.stringify(run?.config ?? {});
+  loadTrace();
+}
+async function loadTrace() {
+  const dir = $("#t-run").value, runId = $("#t-setting").value, round = $("#t-round").value;
+  traceEvents = await api(`/api/events?dir=${encodeURIComponent(dir)}&runId=${encodeURIComponent(runId)}&round=${round}`);
+  const config = JSON.parse($("#t-round").dataset.config || "{}");
+  const policy = traceEvents.find((e) => e.step === "guard" && e.data?.policy)?.data.policy;
+  const outcome = traceEvents.some((e) => e.result === "blocked") ? `<span class="pill" style="color:var(--bad-ink)">✗ guard blocked a payment</span>` : "";
+  $("#trace-head").innerHTML = `<div class="head-row"><b>Settings</b>${Object.entries(config).map(([k, v]) => `<span class="pill">${esc(k)} = ${esc(v)}</span>`).join("")}${outcome}</div>` +
+    `<div class="head-row" style="margin-top:8px"><b>Guard rules</b><span class="muted">${esc(policy ?? "no guard in this setting")}</span></div>`;
+  $("#detail").innerHTML = `<p class="muted" style="margin-top:0">Click a step. Guard steps show every check it ran.</p>`;
+  $("#raw").textContent = "–";
+  sequence($("#trace"), traceEvents, true);
+}
+function jumpToTrace(dir, runId) { openTab("trace"); $("#t-run").value = dir; loadTraceRun(dir, runId); }
+
+function describe(e) {
+  const bits = [e.step];
+  if (e.resource && !["mine", "settle"].includes(e.step)) bits.push(e.resource.replace(/^GET /, ""));
+  if (e.amount) bits.push(usd(e.amount));
+  if (e.result) bits.push(e.result);
+  if (e.reason) bits.push(e.reason);
+  return bits.join(" · ");
+}
+function tone(e) { return e.result && BAD.has(String(e.result)) ? "bad" : e.result && GOOD.has(String(e.result)) ? "good" : "plain"; }
+const fit = (t, n) => (t.length > n ? t.slice(0, n - 1) + "…" : t);
+
+function sequence(el, events, clickable) {
+  const mid = el.id || "seq";
+  if (!events.length) { el.innerHTML = `<p class="empty">No events for this selection.</p>`; return; }
+  const used = new Set(events.flatMap((e) => [LANE_OF[e.actor], e.to && LANE_OF[e.to]]));
+  const lanes = LANES.filter((l) => !["guard", "cache"].includes(l) || used.has(l));
+  const W = 1100, gap = W / lanes.length, cx = (l) => gap * lanes.indexOf(l) + gap / 2, lx = (a) => cx(LANE_OF[a] ?? a);
+  const color = { bad: "var(--bad-ink)", good: "var(--good-ink)", plain: "var(--ink-2)" };
+  const maxChars = Math.floor((gap - 24) / 6.6);
+
+  // layout: guard rows are taller (verdict + reason); a divider starts each new purchase
+  let y = 78, prevPid = null, purchaseNo = 0;
+  const rows = events.map((e) => {
+    const sep = e.purchaseId && e.purchaseId !== prevPid && prevPid !== null;
+    if (e.purchaseId && e.purchaseId !== prevPid) purchaseNo++;
+    if (e.purchaseId) prevPid = e.purchaseId;
+    if (sep) y += 18;
+    const h = e.step === "guard" ? 50 : 34;
+    const row = { e, y, h, sep, purchaseNo };
+    y += h;
+    return row;
+  });
+  const H = y + 16;
+
+  let s = `<svg viewBox="0 0 ${W} ${H}" width="100%" style="min-width:820px" role="img" aria-label="Sequence of events"><defs>` +
+    ["plain", "good", "bad"].map((t) => `<marker id="${mid}-ar-${t}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="${color[t]}"/></marker>`).join("") + `</defs>`;
+
+  // the buyer's own code: buyer agent + guard
+  const buyerLanes = lanes.filter((l) => l === "buyer" || l === "guard");
+  const gx = gap * lanes.indexOf(buyerLanes[0]) + 4, gw = gap * buyerLanes.length - 8;
+  s += `<rect x="${gx}" y="4" width="${gw}" height="${H - 8}" rx="12" fill="var(--series)" fill-opacity="0.06" stroke="var(--series)" stroke-opacity="0.35" stroke-dasharray="5 4"/>`;
+  s += `<text x="${gx + 12}" y="20" font-size="11" font-weight="600" fill="var(--series)">BUYER SIDE · your code</text>`;
+
+  lanes.forEach((l) => {
+    const x = cx(l);
+    s += `<rect x="${x - 70}" y="28" width="140" height="30" rx="8" fill="var(--surface)" stroke="var(--axis)"/><text x="${x}" y="48" text-anchor="middle" font-size="13" font-weight="600" fill="var(--ink)">${NAME[l]}</text>`;
+    if (l === "guard") s += `<text x="${x}" y="70" text-anchor="middle" font-size="10.5" fill="var(--muted)">runs before signing</text>`;
+    s += `<line x1="${x}" x2="${x}" y1="58" y2="${H - 8}" stroke="var(--grid)" stroke-dasharray="4 4"/>`;
+  });
+
+  rows.forEach(({ e, y, h, sep, purchaseNo }, i) => {
+    const t = tone(e), mark = t === "bad" ? "✗ " : t === "good" ? "✓ " : "";
+    if (sep) s += `<line x1="8" x2="${W - 8}" y1="${y - 9}" y2="${y - 9}" stroke="var(--axis)"/><text x="${W - 12}" y="${y - 13}" text-anchor="end" font-size="10.5" fill="var(--muted)">purchase ${purchaseNo}</text>`;
+    s += `<g class="ev" data-i="${i}" style="cursor:${clickable ? "pointer" : "default"}"><rect x="0" y="${y}" width="${W}" height="${h}" fill="transparent"/>`;
+    if (e.to && LANE_OF[e.to] !== LANE_OF[e.actor]) {
+      const x1 = lx(e.actor), x2 = lx(e.to), ay = y + 22;
+      const dash = /verify|mine|response|deliver|402|refuse|replay|cache/.test(e.step) && !/request/.test(e.step) ? "5 4" : "none";
+      s += `<line x1="${x1}" x2="${x2 + (x2 > x1 ? -2 : 2)}" y1="${ay}" y2="${ay}" stroke="${color[t]}" stroke-width="1.5" stroke-dasharray="${dash}" marker-end="url(#${mid}-ar-${t})"/>`;
+      s += `<text x="${Math.min(x1, x2) + 10}" y="${ay - 6}" font-size="11.5" fill="${color[t]}">${esc(fit(mark + describe(e), Math.floor(Math.abs(x2 - x1) / 6.4)))}</text>`;
+    } else if (e.step === "guard") {
+      const x = lx(e.actor), w = gap - 14, bx = x - w / 2;
+      const n = e.data?.checks?.length ?? 0;
+      const off = !n && e.result !== "blocked";
+      const tt = off ? "plain" : t;
+      const verdict = e.result === "blocked" ? "✗ BLOCKED" : off ? "○ GUARD OFF" : `✓ ALLOWED · ${n} checks`;
+      const line2 = off ? "hook ran, no rules set" : e.data?.short ?? e.reason ?? "";
+      s += `<rect x="${bx}" y="${y + 4}" width="${w}" height="${h - 8}" rx="7" fill="${tt === "bad" ? "var(--bad-bg)" : tt === "good" ? "var(--good-bg)" : "var(--surface)"}" stroke="${off ? "var(--axis)" : color[tt]}" stroke-width="1.25" ${off ? 'stroke-dasharray="4 3"' : ""}/>`;
+      s += `<text x="${bx + 9}" y="${y + 21}" font-size="12" font-weight="700" fill="${color[tt]}">${esc(verdict)}</text>`;
+      s += `<text x="${bx + 9}" y="${y + 37}" font-size="11.5" fill="var(--ink)">${esc(fit(line2, maxChars))}</text>`;
+    } else {
+      const x = lx(e.actor), w = gap - 14, bx = x - w / 2;
+      const who = e.actor === "agent" ? "agent: " : "";
+      const text = who + mark + (e.data?.short ?? describe(e));
+      s += `<rect x="${bx}" y="${y + 8}" width="${w}" height="${h - 14}" rx="6" fill="${t === "bad" ? "var(--bad-bg)" : t === "good" ? "var(--good-bg)" : "var(--surface)"}" stroke="${t === "plain" ? "var(--axis)" : color[t]}"/>`;
+      s += `<text x="${bx + 8}" y="${y + 23}" font-size="11.5" fill="var(--ink)">${esc(fit(text, maxChars))}</text>`;
+    }
+    s += `</g>`;
+  });
+  el.innerHTML = s + `</svg>`;
+  el.querySelectorAll("g.ev").forEach((g) => {
+    const e = rows[+g.dataset.i].e;
+    g.onmousemove = (ev) => showTip(`<b>${esc(e.actor)}${e.to ? " → " + esc(e.to) : ""}</b><br>${esc(e.data?.short ?? describe(e))}${e.reason && e.data?.short ? `<br><span style="color:var(--muted)">${esc(e.reason)}</span>` : ""}`, ev);
+    g.onmouseleave = hideTip;
+    if (clickable) g.onclick = () => showDetail(e);
+  });
+}
+
+function showDetail(e) {
+  $("#raw").textContent = JSON.stringify(e, null, 2);
+  const checks = e.data?.checks;
+  if (e.step === "guard" && checks?.length) {
+    $("#detail").innerHTML = `<p style="margin-top:0"><b>${e.result === "blocked" ? "✗ Blocked" : "✓ Allowed"}</b> before signing. The guard compared the seller's live 402 with the offer the agent chose and the rules below.</p>` +
+      `<table class="checks"><thead><tr><th>Check</th><th>Expected</th><th>Got</th><th></th></tr></thead><tbody>` +
+      checks.map((c) => `<tr class="${c.ok ? "" : "fail"}"><td>${esc(c.field ?? c.rule)}</td><td>${esc(fmtVal(c.field, c.expected))}</td><td>${esc(fmtVal(c.field, c.got))}</td><td class="${c.ok ? "ok" : "no"}">${c.ok ? "✓" : "✗"}</td></tr>`).join("") +
+      `</tbody></table><p class="muted">Rules: ${esc(e.data.policy ?? "")}</p>`;
+  } else if (e.step === "guard") {
+    $("#detail").innerHTML = `<p style="margin-top:0"><b>No rules configured.</b> The hook ran, but the guard was off, so every payment passed. This is the "no fix" setting.</p>`;
+  } else {
+    $("#detail").innerHTML = `<p style="margin-top:0"><b>${esc(e.actor)}${e.to ? " → " + esc(e.to) : ""}</b> · ${esc(e.step)}</p><p class="muted">${esc(e.data?.short ?? describe(e))}</p>`;
+  }
+}
+const fmtVal = (field, v) => (field === "amount" && /^\d+$/.test(v) ? `${v} (${usd(v)})` : v);
+
+// ---------- live ----------
+async function loadLive() {
+  const { dir, total, events } = await api("/api/live");
+  $("#live-meta").innerHTML = dir ? `<span class="pill">${esc(dir)}</span> · ${total} events · showing the latest ${events.length}` : "Waiting for a run…";
+  sequence($("#live"), events.slice(-24), false);
+}
+
+loadScore();
+loadRuns();
+api("/api/where").then((w) => { $("#where").textContent = `reading ${w.results.split("/").slice(-2).join("/")} · ${w.runs} runs`; $("#where").title = w.results; });
+</script>
+</body>
+</html>

@@ -278,13 +278,26 @@ the full pipeline (offer, 402, guard, signature, verify, settle). See RUNNING.md
 
 ## See also
 
-x402 security has been studied before. For context and comparison, see published
-research on x402 attacks and agent-payment security (for example, work at USENIX
-Security 2026 and preprints on arXiv in 2026) and the x402 security test discussions in
-the Google `a2a-x402` project. This handbook focuses on one boundary: what a user
-authorized, what the agent signed, what settled, and what was delivered.
+x402 security has been studied before. This handbook is a practitioner's walk-through,
+not the first study. For deeper and peer-reviewed analysis, see:
 
----
+- Qinying Wang, Yong Yang, Yuan Chen, Shouling Ji, Mathias Payer. "When HTTP 402 Meets
+  the Blockchain: Risks on Emerging x402 Payments." USENIX Security 2026.
+  <https://www.usenix.org/conference/usenixsecurity26/presentation/wang-qinying>: 
+  a systematic study of 15 facilitators; its attack classes include "Free Shopping,"
+  the same name used for card 3 here.
+- Zelin Li, Qin Wang, Zhipeng Wang. "Five Attacks on x402 Agentic Payment Protocol."
+  arXiv:2605.11781, May 2026. <https://arxiv.org/abs/2605.11781>: attacks on
+  authorization, binding, and replay, validated on Base Sepolia and live endpoints.
+- Ke Jiang and others. "A Formal Analysis of Agent Payment Protocols." arXiv:2609.00060,
+  2026. <https://arxiv.org/abs/2609.00060>: formal verification of x402, MPP, ACP,
+  and AP2.
+- a2a-x402 security testing harness. GitHub Discussion #72, google-agentic-commerce/a2a-x402.
+  <https://github.com/google-agentic-commerce/a2a-x402/discussions/72>: an
+  open-source x402 test harness (20 tests across seven attack categories).
+
+This handbook focuses on one boundary: what a user authorized, what the agent signed,
+what settled, and what was delivered.
 
 ## Safety
 

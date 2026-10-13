@@ -45,7 +45,12 @@ async function run(title: string, guard?: Guard) {
     await sleep(3000);
     r = await buy(`${seller.url}/lookup`);
   }
-  const after = await env.balance(env.buyer);
+  let after = await env.balance(env.buyer);
+  if (r.status === 200 && r.tx && !/^0xd+$/.test(r.tx)) {
+    // Settle mines a moment after the 200 comes back, and a public RPC node can lag a little more.
+    // Poll until the buyer balance reflects the payment, so the demo shows the real drop, not $0.00.
+    for (let i = 0; i < 8 && after === before; i++) { await sleep(1500); after = await env.balance(env.buyer); }
+  }
   if (r.status === 200) {
     say(`   ${C.green}200 OK${C.reset}  data delivered.  ${r.tx ? (/^0xd+$/.test(r.tx) ? "Settled (dry run)." : "Settled on Base Sepolia.") : ""}`);
     if (r.tx) say(`   ${C.dim}${link(r.tx)}${C.reset}`);
